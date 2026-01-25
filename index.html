@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gesichter">
+    <meta name="description" content="Interaktive Audio-App mit Gesichtern">
+    <meta name="theme-color" content="#FFD700">
+    
+    <title>Gesichter Audio App</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="https://indienfan.github.io/HeinoPeter/manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="https://indienfan.github.io/HeinoPeter/icon-192.png">
+    
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #fffaf0, #e8e0d5);
+            overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        #container {
+            display: flex; width: 100%; height: 100%;
+            justify-content: center; align-items: center; gap: 5vw; 
+        }
+        .face-frame {
+            width: 38vw; height: 55vh; max-width: 450px; max-height: 600px;
+            border: 15px solid #ffffff; border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            background-size: cover; background-position: center;
+            background-color: #ddd;
+            cursor: pointer; will-change: transform; 
+            transition: border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .playing { 
+            border-color: #FFD700; 
+            box-shadow: 0 0 60px rgba(255, 215, 0, 0.6); 
+            z-index: 10; 
+        }
+        
+        #install-prompt {
+            position: fixed; top: 10px; left: 50%;
+            transform: translateX(-50%);
+            background: #FFD700; color: #000;
+            padding: 12px 20px; border-radius: 8px;
+            font-weight: bold; font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer; z-index: 1000;
+            display: none;
+        }
+        
+        #debug { 
+            display: none;
+            position: fixed;
+            top: 50px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 10px;
+            font-size: 11px;
+            border-radius: 5px;
+            z-index: 999;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Installations-Aufforderung -->
+    <div id="install-prompt">📱 App installieren</div>
+
+    <div id="debug"></div>
+
+    <div id="container">
+        <div id="left" class="face-frame" ontouchstart="handleTap(1, event)" onclick="handleTap(1, event)" style="background-image: url('https://indienfan.github.io/HeinoPeter/links.jpg');"></div>
+        <div id="right" class="face-frame" ontouchstart="handleTap(2, event)" onclick="handleTap(2, event)" style="background-image: url('https://indienfan.github.io/HeinoPeter/rechts.jpg');"></div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://indienfan.github.io/HeinoPeter/';
+        
+        const debug = document.getElementById('debug');
+        let debugLines = [];
+        function log(msg) {
+            debugLines.push(new Date().toLocaleTimeString() + ': ' + msg);
+            if (debugLines.length > 8) debugLines.shift();
+            debug.innerHTML = debugLines.join('<br>');
+        }
+
+        window.onerror = (m) => log('ERROR: ' + m);
+        
+        log('App gestartet von: ' + window.location.href);
+        
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register(BASE_URL + 'service-worker.js')
+                    .then(reg => log('SW registriert'))
+                    .catch(err => log('SW Fehler: ' + err));
+            });
+        }
+
+        // PWA Installation Prompt
+        let deferredPrompt;
+        const installPrompt = document.getElementById('install-prompt');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installPrompt.style.display = 'block';
+            log('Install Prompt bereit');
+        });
+
+        installPrompt.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            log('Install: ' + outcome);
+            deferredPrompt = null;
+            installPrompt.style.display = 'none';
+        });
+
+        // iOS Audio Context
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let currentPlaying = 0;
+        let audios = { 1: null, 2: null };
+        let sources = { 1: null, 2: null };
+        let analysers = { 1: null, 2: null };
+        let animationId = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                log('AudioContext erstellt: ' + audioCtx.state);
+                
+                audios[1] = new Audio(BASE_URL + 'links.mp3');
+                audios[2] = new Audio(BASE_URL + 'rechts.mp3');
+                audios[1].loop = true;
+                audios[2].loop = true;
+                
+                audios[1].onerror = (e) => log('Fehler links.mp3: ' + e.type);
+                audios[2].onerror = (e) => log('Fehler rechts.mp3: ' + e.type);
+                
+                audios[1].onloadeddata = () => log('links.mp3 geladen');
+                audios[2].onloadeddata = () => log('rechts.mp3 geladen');
+                
+                audios[1].load();
+                audios[2].load();
+                
+                log('Audio URLs: ' + BASE_URL + 'links.mp3');
+            } catch(e) {
+                log('Init Fehler: ' + e.message);
+            }
+        }
+
+        function handleTap(id, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            log('Tap auf Gesicht ' + id);
+            
+            if (!audioCtx) {
+                initAudio();
+            }
+
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    log('AudioContext resumed');
+                    playAudio(id);
+                });
+            } else if (audioCtx) {
+                playAudio(id);
+            }
+        }
+
+        function playAudio(id) {
+            if (!audios[id]) {
+                log(`Audio ${id} nicht initialisiert`);
+                return;
+            }
+
+            try {
+                if (!sources[id]) {
+                    sources[id] = audioCtx.createMediaElementSource(audios[id]);
+                    analysers[id] = audioCtx.createAnalyser();
+                    analysers[id].fftSize = 256;
+                    analysers[id].smoothingTimeConstant = 0.8;
+                    sources[id].connect(analysers[id]);
+                    analysers[id].connect(audioCtx.destination);
+                    log(`Analyser ${id} erstellt`);
+                }
+
+                if (currentPlaying === id) {
+                    pauseAll();
+                } else {
+                    pauseAll();
+                    audios[id].play().then(() => {
+                        currentPlaying = id;
+                        const frame = document.getElementById(id === 1 ? 'left' : 'right');
+                        frame.classList.add('playing');
+                        log(`Spielt: Audio ${id}`);
+                        animate();
+                    }).catch(err => {
+                        log('Play Error: ' + err.message);
+                    });
+                }
+            } catch(e) {
+                log('Audio Setup Error: ' + e.message);
+            }
+        }
+
+        function pauseAll() {
+            if (animationId) cancelAnimationFrame(animationId);
+            Object.values(audios).forEach(a => { if(a) a.pause(); });
+            document.querySelectorAll('.face-frame').forEach(f => {
+                f.classList.remove('playing');
+                f.style.transform = 'scale(1)';
+            });
+            currentPlaying = 0;
+        }
+
+        function animate() {
+            if (currentPlaying === 0 || !analysers[currentPlaying]) return;
+            
+            const bufferLength = analysers[currentPlaying].frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analysers[currentPlaying].getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            const sampleSize = Math.min(30, bufferLength);
+            for (let i = 0; i < sampleSize; i++) {
+                sum += dataArray[i];
+            }
+            
+            const avg = sum / sampleSize;
+            const scale = 1 + (avg / 800);
+            
+            const frame = document.getElementById(currentPlaying === 1 ? 'left' : 'right');
+            frame.style.transform = `scale(${scale})`;
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        document.addEventListener('touchmove', e => {
+            if (e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', e => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
