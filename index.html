@@ -91,10 +91,9 @@
         const debug = document.getElementById('debug');
         let debugLines = [];
         function log(msg) {
-            // Logfiles sind jetzt unsichtbar - nur intern gespeichert
             debugLines.push(new Date().toLocaleTimeString() + ': ' + msg);
             if (debugLines.length > 8) debugLines.shift();
-            // debug.innerHTML = debugLines.join('<br>'); // Auskommentiert für unsichtbare Logs
+            // debug.innerHTML = debugLines.join('<br>');
         }
 
         window.onerror = (m) => log('ERROR: ' + m);
@@ -105,6 +104,10 @@
         // Prüfe ob iOS oder Desktop
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        log('isIOS: ' + isIOS);
+        log('isMobile: ' + isMobile);
+        log('UserAgent: ' + navigator.userAgent.substring(0, 50));
         
         // PWA Service Worker Registration (nur nicht-iOS)
         if ('serviceWorker' in navigator && !isIOS) {
@@ -121,8 +124,11 @@
 
         // Zeige Button auf Desktop immer an (außer iOS)
         if (!isIOS && !isMobile) {
+            log('Desktop erkannt - Button wird angezeigt');
             installPrompt.style.display = 'block';
-            installPrompt.textContent = '💾 Als Lesezeichen speichern';
+            installPrompt.textContent = '📱 App erzeugen';
+        } else {
+            log('Mobile/iOS erkannt - kein Desktop-Button');
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -137,7 +143,7 @@
         installPrompt.addEventListener('click', async () => {
             if (!deferredPrompt) {
                 // Fallback für Browser ohne PWA-Support
-                alert('Bitte fügen Sie diese Seite zu Ihren Lesezeichen hinzu:\n\nChrome/Edge: Strg+D\nFirefox: Strg+D\nSafari: Cmd+D');
+                alert('So fügen Sie die App hinzu:\n\niPhone: Safari → Teilen-Button → "Zum Home-Bildschirm"\n\nAndroid: Chrome → Menü → "App installieren"\n\nDesktop: Setzen Sie ein Lesezeichen (Strg+D oder Cmd+D)');
                 return;
             }
             deferredPrompt.prompt();
