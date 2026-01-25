@@ -12,10 +12,10 @@
     <title>Gesichter Audio App</title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="https://indienfan.github.io/HeinoPeter/manifest.json">
+    <link rel="manifest" href="https://indienfan.github.io/hp/manifest.json">
     
     <!-- iOS Icons -->
-    <link rel="apple-touch-icon" href="https://indienfan.github.io/HeinoPeter/icon-192.png">
+    <link rel="apple-touch-icon" href="https://indienfan.github.io/hp/icon-192.png">
     
     <style>
         body, html {
@@ -60,9 +60,9 @@
         }
         
         #debug { 
-            display: none;
+            display: block;
             position: fixed;
-            top: 50px;
+            top: 10px;
             left: 10px;
             right: 10px;
             background: rgba(0,0,0,0.8);
@@ -83,12 +83,12 @@
     <div id="debug"></div>
 
     <div id="container">
-        <div id="left" class="face-frame" ontouchstart="handleTap(1, event)" onclick="handleTap(1, event)" style="background-image: url('https://indienfan.github.io/HeinoPeter/links.jpg');"></div>
-        <div id="right" class="face-frame" ontouchstart="handleTap(2, event)" onclick="handleTap(2, event)" style="background-image: url('https://indienfan.github.io/HeinoPeter/rechts.jpg');"></div>
+        <div id="left" class="face-frame" ontouchstart="handleTap(1, event)" onclick="handleTap(1, event)" style="background-image: url('https://indienfan.github.io/hp/links.jpg');"></div>
+        <div id="right" class="face-frame" ontouchstart="handleTap(2, event)" onclick="handleTap(2, event)" style="background-image: url('https://indienfan.github.io/hp/rechts.jpg');"></div>
     </div>
 
     <script>
-        const BASE_URL = 'https://indienfan.github.io/HeinoPeter/';
+        const BASE_URL = 'https://indienfan.github.io/hp/';
         
         const debug = document.getElementById('debug');
         let debugLines = [];
@@ -101,6 +101,7 @@
         window.onerror = (m) => log('ERROR: ' + m);
         
         log('App gestartet von: ' + window.location.href);
+        log('BASE_URL: ' + BASE_URL);
         
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
