@@ -122,13 +122,13 @@
         let deferredPrompt;
         const installPrompt = document.getElementById('install-prompt');
 
-        // Zeige Button auf Desktop immer an (außer iOS)
-        if (!isIOS && !isMobile) {
-            log('Desktop erkannt - Button wird angezeigt');
+        // Zeige Button NUR auf Android (nicht Desktop, nicht iOS)
+        if (!isIOS && isMobile) {
+            log('Android erkannt - Button wird angezeigt');
             installPrompt.style.display = 'block';
             installPrompt.textContent = '📱 App erzeugen';
         } else {
-            log('Mobile/iOS erkannt - kein Desktop-Button');
+            log('Desktop/iOS erkannt - kein Button');
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
