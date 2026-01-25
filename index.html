@@ -11,9 +11,6 @@
     
     <title>HeinoPeter</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="https://indienfan.github.io/hp/manifest.json">
-    
     <!-- iOS Icons -->
     <link rel="apple-touch-icon" href="https://indienfan.github.io/hp/icon-192.png">
     
@@ -48,17 +45,6 @@
             z-index: 10; 
         }
         
-        #install-prompt {
-            position: fixed; top: 10px; left: 50%;
-            transform: translateX(-50%);
-            background: #FFD700; color: #000;
-            padding: 12px 20px; border-radius: 8px;
-            font-weight: bold; font-size: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            cursor: pointer; z-index: 1000;
-            display: none;
-        }
-        
         #debug { 
             display: none;
             position: fixed;
@@ -77,11 +63,6 @@
     </style>
 </head>
 <body>
-    <!-- Installations-Aufforderung -->
-    <div id="install-prompt">📱 App installieren</div>
-
-    <div id="debug"></div>
-
     <div id="container">
         <div id="left" class="face-frame" ontouchstart="handleTap(1, event)" onclick="handleTap(1, event)" style="background-image: url('https://indienfan.github.io/hp/links.jpg');"></div>
         <div id="right" class="face-frame" ontouchstart="handleTap(2, event)" onclick="handleTap(2, event)" style="background-image: url('https://indienfan.github.io/hp/rechts.jpg');"></div>
@@ -103,35 +84,6 @@
         
         log('App gestartet von: ' + window.location.href);
         log('BASE_URL: ' + BASE_URL);
-        
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register(BASE_URL + 'service-worker.js')
-                    .then(reg => log('SW registriert'))
-                    .catch(err => log('SW Fehler: ' + err));
-            });
-        }
-
-        // PWA Installation Prompt
-        let deferredPrompt;
-        const installPrompt = document.getElementById('install-prompt');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installPrompt.style.display = 'block';
-            log('Install Prompt bereit');
-        });
-
-        installPrompt.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            log('Install: ' + outcome);
-            deferredPrompt = null;
-            installPrompt.style.display = 'none';
-        });
 
         // iOS Audio Context
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
