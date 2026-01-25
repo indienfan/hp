@@ -102,8 +102,9 @@
         log('App gestartet von: ' + window.location.href);
         log('BASE_URL: ' + BASE_URL);
         
-        // Prüfe ob iOS
+        // Prüfe ob iOS oder Desktop
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         // PWA Service Worker Registration (nur nicht-iOS)
         if ('serviceWorker' in navigator && !isIOS) {
@@ -114,27 +115,37 @@
             });
         }
 
-        // PWA Installation Prompt (nur Android/Desktop, nicht iOS)
-        if (!isIOS) {
-            let deferredPrompt;
-            const installPrompt = document.getElementById('install-prompt');
+        // PWA Installation Prompt
+        let deferredPrompt;
+        const installPrompt = document.getElementById('install-prompt');
 
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                installPrompt.style.display = 'block';
-                log('Install Prompt bereit');
-            });
-
-            installPrompt.addEventListener('click', async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                log('Install: ' + outcome);
-                deferredPrompt = null;
-                installPrompt.style.display = 'none';
-            });
+        // Zeige Button auf Desktop immer an (außer iOS)
+        if (!isIOS && !isMobile) {
+            installPrompt.style.display = 'block';
+            installPrompt.textContent = '💾 Als Lesezeichen speichern';
         }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            if (isIOS) return;
+            e.preventDefault();
+            deferredPrompt = e;
+            installPrompt.style.display = 'block';
+            installPrompt.textContent = '📱 App installieren';
+            log('Install Prompt bereit');
+        });
+
+        installPrompt.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                // Fallback für Browser ohne PWA-Support
+                alert('Bitte fügen Sie diese Seite zu Ihren Lesezeichen hinzu:\n\nChrome/Edge: Strg+D\nFirefox: Strg+D\nSafari: Cmd+D');
+                return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            log('Install: ' + outcome);
+            deferredPrompt = null;
+            installPrompt.style.display = 'none';
+        });
 
         // iOS Audio Context
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
